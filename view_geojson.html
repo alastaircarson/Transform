@@ -1,0 +1,180 @@
+<html>
+	<head>
+		<title>View GeoJSON</title>
+		<script src="transform.js"></script>
+		<script src="turf.min.js"></script>
+		<script>
+			CanvasRenderingContext2D.prototype.drawGeoJSONPolygon = function (coordinates, fillColor, strokeColor) {
+				if (coordinates.length <= 0) return;
+				this.beginPath();
+				// parts
+				for (var i = 0; i < coordinates.length; i++) {
+					var part = coordinates[i];
+					if (part.length <= 2) return;
+					
+					this.moveTo(part[0][0], part[0][1]);
+					for (var j = 1; j < part.length; j++) {
+						this.lineTo(part[j][0], part[j][1]);
+					}
+					if (strokeColor != null && strokeColor != undefined)
+						this.strokeStyle = strokeColor;
+
+					if (fillColor != null && fillColor != undefined) {
+						this.fillStyle = fillColor;
+						this.fill();
+					}
+				}
+			}
+
+			function clearCanvas()
+			{
+				var canvas = document.getElementById("myCanvas");
+				var context = canvas.getContext("2d");
+				context.clearRect(0, 0, canvas.width, canvas.height);
+			}
+
+			var features = null;
+			var featureInfo = null;
+			function drawFeatures()
+			{
+				if(!features)
+				{
+					loadFeatures();
+				}
+				else
+				{
+					drawLocalFeatures();
+				}
+			}
+			
+			function calculateFeatureInfo()
+			{
+				var bbox = turf.bbox(features);
+				featureInfo = new Object();
+				featureInfo.minx = bbox[0];
+				featureInfo.miny = bbox[1];
+				featureInfo.maxx = bbox[2];
+				featureInfo.maxy = bbox[3];
+				featureInfo.centrex = (bbox[0] + bbox[2]) / 2;
+				featureInfo.centrey = (bbox[1] + bbox[3]) / 2;
+				featureInfo.width = bbox[2] - bbox[0];
+				featureInfo.height = bbox[3] - bbox[1];
+				featureInfo.max_dim = Math.max(featureInfo.width,featureInfo.height);
+			}
+			
+			function setupControls()
+			{
+				rangeCentreX.min = Math.round(featureInfo.minx);
+				rangeCentreX.max = Math.round(featureInfo.maxx);
+				rangeCentreX.value = Math.round(featureInfo.centrex);
+
+				rangeCentreY.min = Math.round(featureInfo.miny);
+				rangeCentreY.max = Math.round(featureInfo.maxy);
+				rangeCentreY.value = Math.round(featureInfo.centrey);
+				
+				rangeScale.max = Math.round(featureInfo.max_dim);
+				rangeScale.value = Math.round(featureInfo.max_dim);
+			}
+			
+			function setupTransform(canvas, context)
+			{
+				var r = document.getElementById("rangeAngle");
+				var tx = document.getElementById("rangeCentreX");
+				var ty = document.getElementById("rangeCentreY");
+				var sc = document.getElementById("rangeScale");
+				var scalefactor = canvas.width/sc.value;
+
+				var t = new Transform();
+				t.merge(new Translate(250, 250));
+				t.merge(new Rotate(parseFloat(r.value)));
+				t.merge(new Scale(scalefactor));
+				t.merge(new HorizontalFlip());
+				t.merge(new Translate(-parseFloat(tx.value),-parseFloat(ty.value)));
+
+				context.setTransform(t.matrix[0][0],t.matrix[1][0],t.matrix[0][1],t.matrix[1][1],t.matrix[0][2],t.matrix[1][2]);
+/*
+				context.translate(250,250);
+				context.scale(scalefactor,-scalefactor);
+				context.rotate(parseFloat(r.value));
+				context.translate(-parseFloat(tx.value),-parseFloat(ty.value));
+*/
+			}
+			
+			function drawLocalFeatures()
+			{
+				clearCanvas();
+
+				var canvas = document.getElementById("myCanvas");
+				var context = canvas.getContext("2d");
+
+				setupTransform(canvas, context);
+
+				turf.geomEach(features, function (currentGeometry, currentIndex) {
+					var coords = turf.getCoords(currentGeometry);
+					context.drawGeoJSONPolygon(coords, '#00F','#000');
+				});
+
+				// reset transform
+				context.setTransform(1,0,0,1,0,0);
+			}
+
+			function loadFeatures()
+			{
+				readTextFile("scotland.geojson",geojson_callback);
+			}
+			
+			// callback to add geojson to map from text
+			function geojson_callback(geojson_text)
+			{
+				features = JSON.parse(geojson_text);
+				calculateFeatureInfo();
+				setupControls();
+				drawLocalFeatures();
+			}
+
+			// loads data from a file (change to web service)
+			function readTextFile(file, callback) {
+				var rawFile = new XMLHttpRequest();
+				rawFile.overrideMimeType("application/json");
+				rawFile.open("GET", file, true);
+				rawFile.onreadystatechange = function() {
+					if (rawFile.readyState === 4 && rawFile.status == "200") {
+						callback(rawFile.responseText);
+					}
+				}
+				rawFile.send(null);
+			}
+			
+			function Redraw()
+			{
+				clearCanvas();
+				drawShapeOnCanvas();
+			}
+			
+			function onReset()
+			{
+				rangeAngle.value = 0;
+				rangeCentreX.value = featureInfo.centrex;
+				rangeCentreY.value = featureInfo.centrey;
+				rangeScale.value = featureInfo.max_dim;				
+				drawFeatures();
+			}
+		</script>
+	</head>
+	<body onload="drawFeatures()">
+		<canvas id="myCanvas" width="500" height="500" style="border:1px Solid Black"></canvas><br />
+		<br />
+		<div style="width:500px;text-align:center">
+			<br />Rotation<br />
+			<input type="range" id="rangeAngle" min="-3.14" max="3.14" step="0.01" value="0" style="width:500px" onchange="drawFeatures()" />
+			<br />Centre X<br />
+			<input type="range" id="rangeCentreX" min="0" max="1" step="1" value="0" style="width:500px" onchange="drawFeatures()" />
+			<br />Centre Y<br />
+			<input type="range" id="rangeCentreY" min="0" max="1" step="1" value="0" style="width:500px" onchange="drawFeatures()" />
+			<br />Scale<br />
+			<input type="range" id="rangeScale" min="1" max="10" step="1" value="1" style="width:500px" onchange="drawFeatures()" />
+			<br /><br />
+			<button id="btnReset" onclick="onReset()">Reset</button>
+		</div>
+	</body>
+</html>
