@@ -32,6 +32,24 @@ class Transform {
 			p.x * this.matrix[0][0] + p.y * this.matrix[0][1] + this.matrix[0][2],
 			p.x * this.matrix[1][0] + p.y * this.matrix[1][1] + this.matrix[1][2]);
 		}
+
+	inverse() {
+	    var det = this.matrix[0][0] * (this.matrix[1][1] * this.matrix[2][2] - this.matrix[2][1] * this.matrix[1][2]) -
+             this.matrix[0][1] * (this.matrix[1][0] * this.matrix[2][2] - this.matrix[1][2] * this.matrix[2][0]) +
+             this.matrix[0][2] * (this.matrix[1][0] * this.matrix[2][1] - this.matrix[1][1] * this.matrix[2][0]);
+        var invdet = 1 / det;
+		var result = new Transform();
+        result.matrix[0][0] = (this.matrix[1][1] * this.matrix[2][2] - this.matrix[2][1] * this.matrix[1][2]) * invdet;
+        result.matrix[0][1] = (this.matrix[0][2] * this.matrix[2][1] - this.matrix[0][1] * this.matrix[2][2]) * invdet;
+        result.matrix[0][2] = (this.matrix[0][1] * this.matrix[1][2] - this.matrix[0][2] * this.matrix[1][1]) * invdet;
+        result.matrix[1][0] = (this.matrix[1][2] * this.matrix[2][0] - this.matrix[1][0] * this.matrix[2][2]) * invdet;
+        result.matrix[1][1] = (this.matrix[0][0] * this.matrix[2][2] - this.matrix[0][2] * this.matrix[2][0]) * invdet;
+        result.matrix[1][2] = (this.matrix[1][0] * this.matrix[0][2] - this.matrix[0][0] * this.matrix[1][2]) * invdet;
+        result.matrix[2][0] = (this.matrix[1][0] * this.matrix[2][1] - this.matrix[2][0] * this.matrix[1][1]) * invdet;
+        result.matrix[2][1] = (this.matrix[2][0] * this.matrix[0][1] - this.matrix[0][0] * this.matrix[2][1]) * invdet;
+        result.matrix[2][2] = (this.matrix[0][0] * this.matrix[1][1] - this.matrix[1][0] * this.matrix[0][1]) * invdet;
+        return result;
+	    }
 	}
 
 class Translate extends Transform {
