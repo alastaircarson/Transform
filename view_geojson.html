@@ -113,6 +113,7 @@
 				setupTransform(canvas, context);
 
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
+					var type = features.features[currentIndex].geometry.type;
 					var coords = turf.getCoords(currentGeometry);
 					context.drawGeoJSONPolygon(coords, '#00F','#000');
 				});
@@ -123,13 +124,14 @@
 
 			function loadFeatures()
 			{
-				readTextFile("scotland.geojson",geojson_callback);
+				readTextFile("countries.geojson",geojson_callback);
 			}
 			
 			// callback to add geojson to map from text
 			function geojson_callback(geojson_text)
 			{
 				features = JSON.parse(geojson_text);
+				alert("Loaded " + features.features.length + " features");
 				calculateFeatureInfo();
 				setupControls();
 				drawLocalFeatures();
@@ -168,13 +170,11 @@
  				var x = event.pageX - elemLeft, y = event.pageY - elemTop;
  				var p = new Point(x,y);
  				var p2 = currentInverse.transformPoint(p);
- 				alert(p2.x + "," + p2.y);
  				var pt = turf.point([p2.x, p2.y]);
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
 					if(turf.inside(pt, currentGeometry))
 					{
-						alert(currentIndex);
-						alert(features.features[currentIndex].properties.id);
+						alert(features.features[currentIndex].properties.name);
 					}
 				});
 			}
