@@ -203,6 +203,17 @@
 				else
 					table.appendChild(new_tbody)
 			}
+
+			function onSelectedFile(evt)
+			{
+				var files = evt.target.files;
+		        var file = files[0];
+       			var reader = new FileReader();
+       			reader.onload = function(event) {
+         			geojson_callback(event.target.result);
+       			}
+       			reader.readAsText(file)
+			}
 		</script>
 	</head>
 	<body onload="drawFeatures()">
@@ -223,11 +234,14 @@
 		<div>
 			<table id="selectedFeatureAttributesTable"></table>
 		</div>
+		<input type="file" id="upload" enctype="multipart/form-data" />
 		<script>
 			myCanvas.addEventListener('click', onCanvasClicked , false);
     		var elemLeft = myCanvas.offsetLeft;
     		var elemTop = myCanvas.offsetTop;
     		var currentTransform = null, currentInverse = null, currentScaleFactor = null;
+			document.getElementById("upload").addEventListener("change", onSelectedFile, false);
 		</script>
+
 	</body>
 </html>
