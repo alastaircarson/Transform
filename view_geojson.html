@@ -4,7 +4,7 @@
 		<script src="transform.js"></script>
 		<script src="turf.min.js"></script>
 		<script>
-			CanvasRenderingContext2D.prototype.drawGeoJSONPolygon = function (coordinates, fillColor, strokeColor) {
+			CanvasRenderingContext2D.prototype.drawGeoJSONPolygon = function (coordinates, fillColor, strokeColor, strokeWidth) {
 				if (coordinates.length <= 0) return;
 				this.beginPath();
 				// parts
@@ -16,8 +16,13 @@
 					for (var j = 1; j < part.length; j++) {
 						this.lineTo(part[j][0], part[j][1]);
 					}
-					if (strokeColor != null && strokeColor != undefined)
+
+					if (strokeColor != null && strokeColor != undefined && strokeWidth != null && strokeWidth != undefined)
+					{
 						this.strokeStyle = strokeColor;
+						this.lineWidth = strokeWidth;
+						this.stroke();
+					}
 
 					if (fillColor != null && fillColor != undefined) {
 						this.fillStyle = fillColor;
@@ -93,6 +98,7 @@
 
 				currentTransform = t;
 				currentInverse = t.inverse();
+				currentScaleFactor = scalefactor;
 
 				context.setTransform(t.matrix[0][0],t.matrix[1][0],t.matrix[0][1],t.matrix[1][1],t.matrix[0][2],t.matrix[1][2]);
 /*
@@ -115,7 +121,7 @@
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
 					var type = features.features[currentIndex].geometry.type;
 					var coords = turf.getCoords(currentGeometry);
-					context.drawGeoJSONPolygon(coords, '#00F','#000');
+					context.drawGeoJSONPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
 				});
 
 				// reset transform
@@ -124,7 +130,7 @@
 
 			function loadFeatures()
 			{
-				readTextFile("countries.geojson",geojson_callback);
+				readTextFile("scotland.geojson",geojson_callback);
 			}
 			
 			// callback to add geojson to map from text
@@ -174,14 +180,33 @@
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
 					if(turf.inside(pt, currentGeometry))
 					{
-						alert(features.features[currentIndex].properties.name);
+						showSelectedFeature(features.features[currentIndex].properties);
 					}
 				});
+			}
+
+			function showSelectedFeature(properties)
+			{
+			    var table = document.getElementById("selectedFeatureAttributesTable");
+				var new_tbody = document.createElement('tbody');
+				if(properties) {
+                    for (var key in properties) {
+                        if (properties.hasOwnProperty(key)) {
+                            var row = document.createElement("tr");
+                            row.innerHTML = "<td>" + key + "</td><td>" + properties[key] + "</td>";
+                            new_tbody.appendChild(row);
+                        }
+                    }
+                }
+				if(table.childElementCount === 1)
+					table.replaceChild(new_tbody, table.childNodes[0]);
+				else
+					table.appendChild(new_tbody)
 			}
 		</script>
 	</head>
 	<body onload="drawFeatures()">
-		<canvas id="myCanvas" width="500" height="500" style="border:1px Solid Black"></canvas><br />
+		<canvas id="myCanvas" width="500" height="500" style="border:1px Solid Black;background-color:aliceblue"></canvas><br />
 		<br />
 		<div style="width:500px;text-align:center">
 			<br />Rotation<br />
@@ -195,11 +220,14 @@
 			<br /><br />
 			<button id="btnReset" onclick="onReset()">Reset</button>
 		</div>
+		<div>
+			<table id="selectedFeatureAttributesTable"></table>
+		</div>
 		<script>
 			myCanvas.addEventListener('click', onCanvasClicked , false);
     		var elemLeft = myCanvas.offsetLeft;
     		var elemTop = myCanvas.offsetTop;
-    		var currentTransform = null, currentInverse = null;
+    		var currentTransform = null, currentInverse = null, currentScaleFactor = null;
 		</script>
 	</body>
 </html>
