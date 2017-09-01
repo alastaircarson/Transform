@@ -13,17 +13,17 @@ class Transform {
 		this.matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
 	}
 
-	merge(by) {
+	apply(trans) {
 		var result = new Transform();
-		result.matrix[0][0] = this.matrix[0][0] * by.matrix[0][0] + this.matrix[0][1] * by.matrix[1][0] + this.matrix[0][2] * by.matrix[2][0];
-		result.matrix[0][1] = this.matrix[0][0] * by.matrix[0][1] + this.matrix[0][1] * by.matrix[1][1] + this.matrix[0][2] * by.matrix[2][1];
-		result.matrix[0][2] = this.matrix[0][0] * by.matrix[0][2] + this.matrix[0][1] * by.matrix[1][2] + this.matrix[0][2] * by.matrix[2][2];
-		result.matrix[1][0] = this.matrix[1][0] * by.matrix[0][0] + this.matrix[1][1] * by.matrix[1][0] + this.matrix[1][2] * by.matrix[2][0];
-		result.matrix[1][1] = this.matrix[1][0] * by.matrix[0][1] + this.matrix[1][1] * by.matrix[1][1] + this.matrix[1][2] * by.matrix[2][1];
-		result.matrix[1][2] = this.matrix[1][0] * by.matrix[0][2] + this.matrix[1][1] * by.matrix[1][2] + this.matrix[1][2] * by.matrix[2][2];
-		result.matrix[2][0] = this.matrix[2][0] * by.matrix[0][0] + this.matrix[2][1] * by.matrix[1][0] + this.matrix[2][2] * by.matrix[2][0];
-		result.matrix[2][1] = this.matrix[2][0] * by.matrix[0][1] + this.matrix[2][1] * by.matrix[1][1] + this.matrix[2][2] * by.matrix[2][1];
-		result.matrix[2][2] = this.matrix[2][0] * by.matrix[0][2] + this.matrix[2][1] * by.matrix[1][2] + this.matrix[2][2] * by.matrix[2][2];
+		result.matrix[0][0] = trans.matrix[0][0] * this.matrix[0][0] + trans.matrix[0][1] * this.matrix[1][0] + trans.matrix[0][2] * this.matrix[2][0];
+		result.matrix[0][1] = trans.matrix[0][0] * this.matrix[0][1] + trans.matrix[0][1] * this.matrix[1][1] + trans.matrix[0][2] * this.matrix[2][1];
+		result.matrix[0][2] = trans.matrix[0][0] * this.matrix[0][2] + trans.matrix[0][1] * this.matrix[1][2] + trans.matrix[0][2] * this.matrix[2][2];
+		result.matrix[1][0] = trans.matrix[1][0] * this.matrix[0][0] + trans.matrix[1][1] * this.matrix[1][0] + trans.matrix[1][2] * this.matrix[2][0];
+		result.matrix[1][1] = trans.matrix[1][0] * this.matrix[0][1] + trans.matrix[1][1] * this.matrix[1][1] + trans.matrix[1][2] * this.matrix[2][1];
+		result.matrix[1][2] = trans.matrix[1][0] * this.matrix[0][2] + trans.matrix[1][1] * this.matrix[1][2] + trans.matrix[1][2] * this.matrix[2][2];
+		result.matrix[2][0] = trans.matrix[2][0] * this.matrix[0][0] + trans.matrix[2][1] * this.matrix[1][0] + trans.matrix[2][2] * this.matrix[2][0];
+		result.matrix[2][1] = trans.matrix[2][0] * this.matrix[0][1] + trans.matrix[2][1] * this.matrix[1][1] + trans.matrix[2][2] * this.matrix[2][1];
+		result.matrix[2][2] = trans.matrix[2][0] * this.matrix[0][2] + trans.matrix[2][1] * this.matrix[1][2] + trans.matrix[2][2] * this.matrix[2][2];
 		this.matrix = result.matrix;
 		}
 	

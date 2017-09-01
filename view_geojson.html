@@ -90,11 +90,11 @@
 				var scalefactor = canvas.width/sc.value;
 
 				var t = new Transform();
-				t.merge(new Translate(250, 250));
-				t.merge(new Rotate(parseFloat(r.value)));
-				t.merge(new Scale(scalefactor));
-				t.merge(new HorizontalFlip());
-				t.merge(new Translate(-parseFloat(tx.value),-parseFloat(ty.value)));
+				t.apply(new Translate(-parseFloat(tx.value),-parseFloat(ty.value)));
+				t.apply(new HorizontalFlip());
+				t.apply(new Rotate(parseFloat(r.value)));
+				t.apply(new Scale(scalefactor));
+				t.apply(new Translate(250, 250));
 
 				currentTransform = t;
 				currentInverse = t.inverse();
