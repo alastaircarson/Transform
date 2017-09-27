@@ -1,41 +1,11 @@
 <html>
 	<head>
-		<title>View GeoJSON</title>
+		<title>GeoJSON Viewer</title>
+		<script src="draw.js"></script>
 		<script src="transform.js"></script>
 		<script src="turf.min.js"></script>
 		<script>
-			CanvasRenderingContext2D.prototype.drawGeoJSONPolygon = function (coordinates, fillColor, strokeColor, strokeWidth) {
-				if (coordinates.length <= 0) return;
-				this.beginPath();
-				// parts
-				for (var i = 0; i < coordinates.length; i++) {
-					var part = coordinates[i];
-					if (part.length <= 2) return;
-					
-					this.moveTo(part[0][0], part[0][1]);
-					for (var j = 1; j < part.length; j++) {
-						this.lineTo(part[j][0], part[j][1]);
-					}
-
-					if (strokeColor != null && strokeColor != undefined && strokeWidth != null && strokeWidth != undefined)
-					{
-						this.strokeStyle = strokeColor;
-						this.lineWidth = strokeWidth;
-						this.stroke();
-					}
-
-					if (fillColor != null && fillColor != undefined) {
-						this.fillStyle = fillColor;
-						this.fill();
-					}
-				}
-			};
-
-			CanvasRenderingContext2D.prototype.drawGeoJSONPoint = function (coordinates, fillColor, size) {
-				this.fillStyle = fillColor;
-				this.fillRect(coordinates[0]-size, coordinates[1]-size, 2*size, 2*size);
-			};
-
+			// clears the canvas for a new draw
 			function clearCanvas()
 			{
 				var canvas = document.getElementById("myCanvas");
@@ -43,8 +13,12 @@
 				context.clearRect(0, 0, canvas.width, canvas.height);
 			}
 
+			// hold the loaded features
 			var features = null;
 			var featureInfo = null;
+
+
+			// load/draw features
 			function drawFeatures()
 			{
 				if(!features)
@@ -56,7 +30,8 @@
 					drawLocalFeatures();
 				}
 			}
-			
+
+			// calculates the extents of the loaded features
 			function calculateFeatureInfo()
 			{
 				var bbox = turf.bbox(features);
@@ -71,7 +46,8 @@
 				featureInfo.height = bbox[3] - bbox[1];
 				featureInfo.max_dim = Math.max(featureInfo.width,featureInfo.height);
 			}
-			
+
+			// initialises the view controls based on the loaded feature info
 			function setupControls()
 			{
 				rangeCentreX.min = Math.round(featureInfo.minx);
@@ -85,7 +61,8 @@
 				rangeScale.max = Math.round(featureInfo.max_dim);
 				rangeScale.value = Math.round(featureInfo.max_dim);
 			}
-			
+
+			// sets up the transform on the canvas based on the view controls
 			function setupTransform(canvas, context)
 			{
 				var r = document.getElementById("rangeAngle");
@@ -114,6 +91,7 @@
 */
 			}
 			
+			// draws the loaded features
 			function drawLocalFeatures()
 			{
 				clearCanvas();
@@ -124,16 +102,28 @@
 				setupTransform(canvas, context);
 
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
-					var type = features.features[currentIndex].geometry.type;
+					var type = turf.getGeomType(currentGeometry);
 					var coords = turf.getCoords(currentGeometry);
+
 					switch(type)
 					{
 						case "Point":
 							context.drawGeoJSONPoint(coords, "#000000", 1/currentScaleFactor);
 							break;
-						default:
+						case "LineString":
+							context.drawGeoJSONLine(coords, "#000000", 1/currentScaleFactor);
+							break;
+						case "MultiLineString":
+							context.drawGeoJSONMultiLine(coords, "#000000", 1/currentScaleFactor);
+							break;
+						case "Polygon":
 							context.drawGeoJSONPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
 							break;
+						case "MultiPolygon":
+							context.drawGeoJSONMultiPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
+							break;
+						default:
+							alert("Can't draw " + type);
 					}
 				});
 
@@ -141,11 +131,16 @@
 				context.setTransform(1,0,0,1,0,0);
 			}
 
-			function loadFeatures()
+			// resets the view controls
+			function onReset()
 			{
-				readTextFile("scotland.geojson",geojson_callback);
+				rangeAngle.value = 0;
+				rangeCentreX.value = featureInfo.centrex;
+				rangeCentreY.value = featureInfo.centrey;
+				rangeScale.value = featureInfo.max_dim;
+				drawFeatures();
 			}
-			
+
 			// callback to add geojson to map from text
 			function geojson_callback(geojson_text)
 			{
@@ -156,7 +151,7 @@
 				drawLocalFeatures();
 			}
 
-			// loads data from a file (change to web service)
+			// loads data from a file
 			function readTextFile(file, callback) {
 				var rawFile = new XMLHttpRequest();
 				rawFile.overrideMimeType("application/json");
@@ -168,22 +163,8 @@
 				}
 				rawFile.send(null);
 			}
-			
-			function Redraw()
-			{
-				clearCanvas();
-				drawShapeOnCanvas();
-			}
-			
-			function onReset()
-			{
-				rangeAngle.value = 0;
-				rangeCentreX.value = featureInfo.centrex;
-				rangeCentreY.value = featureInfo.centrey;
-				rangeScale.value = featureInfo.max_dim;				
-				drawFeatures();
-			}
 
+			// Identify function
 			function onCanvasClicked(event)
 			{
  				var x = event.pageX - elemLeft, y = event.pageY - elemTop;
@@ -191,20 +172,27 @@
  				var p2 = currentInverse.transformPoint(p);
  				var pt = turf.point([p2.x, p2.y]);
 
-				if(features.features[0].geometry.type === "Point") {
-				    var nearest = turf.nearest(pt, features);
-				    if(turf.distance(pt, nearest.geometry) < 100) // default kilometers
-	                    showSelectedFeature(nearest.properties);
-                }
-                else {
+				var type = features.features[0].geometry.type;
+
+				if(type === "Polygon") {
                     turf.geomEach(features, function (currentGeometry, currentIndex) {
                         if (turf.inside(pt, currentGeometry)) {
                             showSelectedFeature(features.features[currentIndex].properties);
                         }
                     });
                 }
+                else if (type === "Point") {
+				    var nearest = turf.nearest(pt, features);
+				    if(turf.distance(pt, nearest.geometry) < 100) // default kilometers
+	                    showSelectedFeature(nearest.properties);
+                }
+                else
+                {
+                	alert("Can't identify this geometry type");
+                }
 			}
 
+			// show selected feature properties
 			function showSelectedFeature(properties)
 			{
 			    var table = document.getElementById("selectedFeatureAttributesTable");
@@ -224,6 +212,13 @@
 					table.appendChild(new_tbody)
 			}
 
+			// initial load of Scotland layer
+			function loadFeatures()
+			{
+				readTextFile("scotland.geojson",geojson_callback);
+			}
+
+			// on selection of a user file
 			function onSelectedFile(evt)
 			{
 				var files = evt.target.files;
@@ -233,6 +228,17 @@
          			geojson_callback(event.target.result);
        			}
        			reader.readAsText(file)
+			}
+
+			// on selection of a file from the predefined list
+			function onSelectFileFromList()
+			{
+				var list = document.getElementById("selectfile");
+				if(list.value != "")
+				{
+					readTextFile(list.value, geojson_callback);
+					list.value = "";
+				}
 			}
 		</script>
 	</head>
@@ -250,11 +256,22 @@
 			<input type="range" id="rangeScale" min="1" max="10" step="1" value="1" style="width:500px" onchange="drawFeatures()" />
 			<br /><br />
 			<button id="btnReset" onclick="onReset()">Reset</button>
+			<br />
+			<br />
+		</div>
+		<div>
+			<select id="selectfile" onchange="onSelectFileFromList()">
+				<option value="">Select a Layer</option>
+				<option value="ne_110m_admin_0_countries.geojson">Countries</option>
+				<option value="scotland.geojson">Scotland</option>
+				<option value="ne_50m_rivers_lake_centerlines.geojson">Rivers Lake Centerlines</option>
+				<option value="populated_places.geojson">Populated Places</option>
+			</select>
+			or <input type="file" id="upload" enctype="multipart/form-data" />
 		</div>
 		<div>
 			<table id="selectedFeatureAttributesTable"></table>
 		</div>
-		<input type="file" id="upload" enctype="multipart/form-data" />
 		<script>
 			myCanvas.addEventListener('click', onCanvasClicked , false);
     		var elemLeft = myCanvas.offsetLeft;
