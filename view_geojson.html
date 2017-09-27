@@ -29,7 +29,12 @@
 						this.fill();
 					}
 				}
-			}
+			};
+
+			CanvasRenderingContext2D.prototype.drawGeoJSONPoint = function (coordinates, fillColor, size) {
+				this.fillStyle = fillColor;
+				this.fillRect(coordinates[0]-size, coordinates[1]-size, 2*size, 2*size);
+			};
 
 			function clearCanvas()
 			{
@@ -121,7 +126,15 @@
 				turf.geomEach(features, function (currentGeometry, currentIndex) {
 					var type = features.features[currentIndex].geometry.type;
 					var coords = turf.getCoords(currentGeometry);
-					context.drawGeoJSONPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
+					switch(type)
+					{
+						case "Point":
+							context.drawGeoJSONPoint(coords, "#000000", 1/currentScaleFactor);
+							break;
+						default:
+							context.drawGeoJSONPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
+							break;
+					}
 				});
 
 				// reset transform
@@ -177,12 +190,19 @@
  				var p = new Point(x,y);
  				var p2 = currentInverse.transformPoint(p);
  				var pt = turf.point([p2.x, p2.y]);
-				turf.geomEach(features, function (currentGeometry, currentIndex) {
-					if(turf.inside(pt, currentGeometry))
-					{
-						showSelectedFeature(features.features[currentIndex].properties);
-					}
-				});
+
+				if(features.features[0].geometry.type === "Point") {
+				    var nearest = turf.nearest(pt, features);
+				    if(turf.distance(pt, nearest.geometry) < 100) // default kilometers
+	                    showSelectedFeature(nearest.properties);
+                }
+                else {
+                    turf.geomEach(features, function (currentGeometry, currentIndex) {
+                        if (turf.inside(pt, currentGeometry)) {
+                            showSelectedFeature(features.features[currentIndex].properties);
+                        }
+                    });
+                }
 			}
 
 			function showSelectedFeature(properties)
