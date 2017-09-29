@@ -1,0 +1,33 @@
+
+.slider
+{
+    width: 500px;
+}
+
+#myCanvas
+{
+    border: 1px Solid Black;
+    background-color: aliceblue;
+    width: 500px;
+    height: 500px;
+}
+
+#title
+{
+    text-align: center;
+}
+
+#controls
+{
+    text-align: center;
+}
+
+#attributes
+{
+    padding: 10px;
+}
+
+#logo
+{
+    width: 200px;
+}

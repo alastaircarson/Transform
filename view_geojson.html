@@ -1,284 +1,69 @@
 <html>
 	<head>
 		<title>GeoJSON Viewer</title>
+		<!--Boostrap -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+		<link href="style.css" rel="stylesheet" />
 		<script src="draw.js"></script>
 		<script src="transform.js"></script>
 		<script src="turf.min.js"></script>
-		<script>
-			// clears the canvas for a new draw
-			function clearCanvas()
-			{
-				var canvas = document.getElementById("myCanvas");
-				var context = canvas.getContext("2d");
-				context.clearRect(0, 0, canvas.width, canvas.height);
-			}
-
-			// hold the loaded features
-			var features = null;
-			var featureInfo = null;
-
-
-			// load/draw features
-			function drawFeatures()
-			{
-				if(!features)
-				{
-					loadFeatures();
-				}
-				else
-				{
-					drawLocalFeatures();
-				}
-			}
-
-			// calculates the extents of the loaded features
-			function calculateFeatureInfo()
-			{
-				var bbox = turf.bbox(features);
-				featureInfo = new Object();
-				featureInfo.minx = bbox[0];
-				featureInfo.miny = bbox[1];
-				featureInfo.maxx = bbox[2];
-				featureInfo.maxy = bbox[3];
-				featureInfo.centrex = (bbox[0] + bbox[2]) / 2;
-				featureInfo.centrey = (bbox[1] + bbox[3]) / 2;
-				featureInfo.width = bbox[2] - bbox[0];
-				featureInfo.height = bbox[3] - bbox[1];
-				featureInfo.max_dim = Math.max(featureInfo.width,featureInfo.height);
-			}
-
-			// initialises the view controls based on the loaded feature info
-			function setupControls()
-			{
-				rangeCentreX.min = Math.round(featureInfo.minx);
-				rangeCentreX.max = Math.round(featureInfo.maxx);
-				rangeCentreX.value = Math.round(featureInfo.centrex);
-
-				rangeCentreY.min = Math.round(featureInfo.miny);
-				rangeCentreY.max = Math.round(featureInfo.maxy);
-				rangeCentreY.value = Math.round(featureInfo.centrey);
-				
-				rangeScale.max = Math.round(featureInfo.max_dim);
-				rangeScale.value = Math.round(featureInfo.max_dim);
-			}
-
-			// sets up the transform on the canvas based on the view controls
-			function setupTransform(canvas, context)
-			{
-				var r = document.getElementById("rangeAngle");
-				var tx = document.getElementById("rangeCentreX");
-				var ty = document.getElementById("rangeCentreY");
-				var sc = document.getElementById("rangeScale");
-				var scalefactor = canvas.width/sc.value;
-
-				var t = new Transform();
-				t.apply(new Translate(-parseFloat(tx.value),-parseFloat(ty.value)));
-				t.apply(new HorizontalFlip());
-				t.apply(new Rotate(parseFloat(r.value)));
-				t.apply(new Scale(scalefactor));
-				t.apply(new Translate(250, 250));
-
-				currentTransform = t;
-				currentInverse = t.inverse();
-				currentScaleFactor = scalefactor;
-
-				context.setTransform(t.matrix[0][0],t.matrix[1][0],t.matrix[0][1],t.matrix[1][1],t.matrix[0][2],t.matrix[1][2]);
-/*
-				context.translate(250,250);
-				context.scale(scalefactor,-scalefactor);
-				context.rotate(parseFloat(r.value));
-				context.translate(-parseFloat(tx.value),-parseFloat(ty.value));
-*/
-			}
-			
-			// draws the loaded features
-			function drawLocalFeatures()
-			{
-				clearCanvas();
-
-				var canvas = document.getElementById("myCanvas");
-				var context = canvas.getContext("2d");
-
-				setupTransform(canvas, context);
-
-				turf.geomEach(features, function (currentGeometry, currentIndex) {
-					var type = turf.getGeomType(currentGeometry);
-					var coords = turf.getCoords(currentGeometry);
-
-					switch(type)
-					{
-						case "Point":
-							context.drawGeoJSONPoint(coords, "#000000", 1/currentScaleFactor);
-							break;
-						case "LineString":
-							context.drawGeoJSONLine(coords, "#000000", 1/currentScaleFactor);
-							break;
-						case "MultiLineString":
-							context.drawGeoJSONMultiLine(coords, "#000000", 1/currentScaleFactor);
-							break;
-						case "Polygon":
-							context.drawGeoJSONPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
-							break;
-						case "MultiPolygon":
-							context.drawGeoJSONMultiPolygon(coords, '#FFFFFF', '#0', 0.5/currentScaleFactor);
-							break;
-						default:
-							alert("Can't draw " + type);
-					}
-				});
-
-				// reset transform
-				context.setTransform(1,0,0,1,0,0);
-			}
-
-			// resets the view controls
-			function onReset()
-			{
-				rangeAngle.value = 0;
-				rangeCentreX.value = featureInfo.centrex;
-				rangeCentreY.value = featureInfo.centrey;
-				rangeScale.value = featureInfo.max_dim;
-				drawFeatures();
-			}
-
-			// callback to add geojson to map from text
-			function geojson_callback(geojson_text)
-			{
-				features = JSON.parse(geojson_text);
-				alert("Loaded " + features.features.length + " features");
-				calculateFeatureInfo();
-				setupControls();
-				drawLocalFeatures();
-			}
-
-			// loads data from a file
-			function readTextFile(file, callback) {
-				var rawFile = new XMLHttpRequest();
-				rawFile.overrideMimeType("application/json");
-				rawFile.open("GET", file, true);
-				rawFile.onreadystatechange = function() {
-					if (rawFile.readyState === 4 && rawFile.status == "200") {
-						callback(rawFile.responseText);
-					}
-				}
-				rawFile.send(null);
-			}
-
-			// Identify function
-			function onCanvasClicked(event)
-			{
- 				var x = event.pageX - elemLeft, y = event.pageY - elemTop;
- 				var p = new Point(x,y);
- 				var p2 = currentInverse.transformPoint(p);
- 				var pt = turf.point([p2.x, p2.y]);
-
-				var type = features.features[0].geometry.type;
-
-				if(type === "Polygon") {
-                    turf.geomEach(features, function (currentGeometry, currentIndex) {
-                        if (turf.inside(pt, currentGeometry)) {
-                            showSelectedFeature(features.features[currentIndex].properties);
-                        }
-                    });
-                }
-                else if (type === "Point") {
-				    var nearest = turf.nearest(pt, features);
-				    if(turf.distance(pt, nearest.geometry) < 100) // default kilometers
-	                    showSelectedFeature(nearest.properties);
-                }
-                else
-                {
-                	alert("Can't identify this geometry type");
-                }
-			}
-
-			// show selected feature properties
-			function showSelectedFeature(properties)
-			{
-			    var table = document.getElementById("selectedFeatureAttributesTable");
-				var new_tbody = document.createElement('tbody');
-				if(properties) {
-                    for (var key in properties) {
-                        if (properties.hasOwnProperty(key)) {
-                            var row = document.createElement("tr");
-                            row.innerHTML = "<td>" + key + "</td><td>" + properties[key] + "</td>";
-                            new_tbody.appendChild(row);
-                        }
-                    }
-                }
-				if(table.childElementCount === 1)
-					table.replaceChild(new_tbody, table.childNodes[0]);
-				else
-					table.appendChild(new_tbody)
-			}
-
-			// initial load of Scotland layer
-			function loadFeatures()
-			{
-				readTextFile("scotland.geojson",geojson_callback);
-			}
-
-			// on selection of a user file
-			function onSelectedFile(evt)
-			{
-				var files = evt.target.files;
-		        var file = files[0];
-       			var reader = new FileReader();
-       			reader.onload = function(event) {
-         			geojson_callback(event.target.result);
-       			}
-       			reader.readAsText(file)
-			}
-
-			// on selection of a file from the predefined list
-			function onSelectFileFromList()
-			{
-				var list = document.getElementById("selectfile");
-				if(list.value != "")
-				{
-					readTextFile(list.value, geojson_callback);
-					list.value = "";
-				}
-			}
-		</script>
+		<script src="main.js"></script>
 	</head>
 	<body onload="drawFeatures()">
-		<canvas id="myCanvas" width="500" height="500" style="border:1px Solid Black;background-color:aliceblue"></canvas><br />
-		<br />
-		<div style="width:500px;text-align:center">
-			<br />Rotation<br />
-			<input type="range" id="rangeAngle" min="-3.14" max="3.14" step="0.01" value="0" style="width:500px" onchange="drawFeatures()" />
-			<br />Centre X<br />
-			<input type="range" id="rangeCentreX" min="0" max="1" step="1" value="0" style="width:500px" onchange="drawFeatures()" />
-			<br />Centre Y<br />
-			<input type="range" id="rangeCentreY" min="0" max="1" step="1" value="0" style="width:500px" onchange="drawFeatures()" />
-			<br />Scale<br />
-			<input type="range" id="rangeScale" min="1" max="10" step="1" value="1" style="width:500px" onchange="drawFeatures()" />
-			<br /><br />
-			<button id="btnReset" onclick="onReset()">Reset</button>
-			<br />
-			<br />
+		<div id="title">
+			<h2>GeoJSON Viewer</h2>
 		</div>
-		<div>
-			<select id="selectfile" onchange="onSelectFileFromList()">
-				<option value="">Select a Layer</option>
-				<option value="ne_110m_admin_0_countries.geojson">Countries</option>
-				<option value="scotland.geojson">Scotland</option>
-				<option value="ne_50m_rivers_lake_centerlines.geojson">Rivers Lake Centerlines</option>
-				<option value="populated_places.geojson">Populated Places</option>
-			</select>
-			or <input type="file" id="upload" enctype="multipart/form-data" />
+		<div class="container">
+			<div class="row">
+				<div class="col-md-7">
+					<canvas id="myCanvas" width="500px" height="500px"></canvas><br />
+				</div>
+				<div class="col-md-5">
+					<div id="controls">
+						<h3>Map Controls</h3>
+
+						<br />Rotation<br />
+						<input type="range" class="slider" id="rangeAngle" min="-3.14" max="3.14" step="0.01" value="0" onchange="drawFeatures()" />
+						<br />Centre X<br />
+						<input type="range" class="slider" id="rangeCentreX" min="0" max="1" step="1" value="0" onchange="drawFeatures()" />
+						<br />Centre Y<br />
+						<input type="range" class="slider" id="rangeCentreY" min="0" max="1" step="1" value="0" onchange="drawFeatures()" />
+						<br />Scale<br />
+						<input type="range" class="slider" id="rangeScale" style="direction:rtl" min="1" max="10" step="1" value="1" onchange="drawFeatures()" />
+						<br /><br />
+						<button id="btnReset" class="btn btn-primary" onclick="onReset()">Reset</button>
+						<br />
+						<br />
+						<h3>Select data or upload a file</h3>
+
+						<select id="selectfile" class="form-control" onchange="onSelectFileFromList()">
+							<option value="">Select a Layer</option>
+							<option value="ne_110m_admin_0_countries.geojson">Countries</option>
+							<option value="scotland.geojson">Scotland</option>
+							<option value="ne_50m_rivers_lake_centerlines.geojson">Rivers Lake Centerlines</option>
+							<option value="populated_places.geojson">Populated Places</option>
+						</select>
+						<br />
+						<input type="file" id="upload" enctype="multipart/form-data" />
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-12">
+					<div id="attributes">
+						<table class="table" id="selectedFeatureAttributesTable"></table>
+					</div>
+				</div>
+			</div>
 		</div>
-		<div>
-			<table id="selectedFeatureAttributesTable"></table>
-		</div>
+		<img id="logo" class="pull-left" src="thinkWhere_logo.png" />
 		<script>
+			var myCanvas = document.getElementById("myCanvas");
 			myCanvas.addEventListener('click', onCanvasClicked , false);
-    		var elemLeft = myCanvas.offsetLeft;
-    		var elemTop = myCanvas.offsetTop;
-    		var currentTransform = null, currentInverse = null, currentScaleFactor = null;
 			document.getElementById("upload").addEventListener("change", onSelectedFile, false);
 		</script>
-
 	</body>
 </html>
